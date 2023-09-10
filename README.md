@@ -1,6 +1,7 @@
+# Инструкция
 ```
 
-1) git clone
+1) git clone https://github.com/temir8173/symfony_test.git
 2) docker compose up -d
 3) docker exec -it mysql bash
 4) mysql -uroot -p123 -e "CREATE DATABASE symfony;"
@@ -11,7 +12,7 @@
 docker exec -it php8.1 bash
 cd $path_to_your_project
 
-php bin/console generate-csv tttt2.csv 1000 10000  //(filepath, uuid-start, qty)
+php bin/console generate-csv tttt.csv 1000 10000  //(filepath, uuid-start, qty)
 php bin/console import tttt.csv mysql
 php bin/console import tttt.csv postgres
 php bin/console import tttt.csv redis
