@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  mysql:
+    build: docker/mysql
+    # иначе не подымется на mac m1
+    platform: linux/x86_64
+    container_name: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysqlData:/var/lib/mysql
+      - ./docker/mysql/config/:/etc/mysql/conf.d/source/
+    environment:
+      MYSQL_DATABASE: my_db
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_USER: mega-admin-php
+      MYSQL_PASSWORD: 123
+
+  postgres:
+    image: postgres:14.1-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgData:/var/lib/postgresql/data
+
+  adminer:
+    build: docker/adminer
+    container_name: adminer
+    volumes:
+      - ./docker/adminer/index.php:/var/www/html/index.php
+      - ./docker/adminer/js/:/var/www/html/js/
+      - ./docker/adminer/plugins/:/var/www/html/plugins-enabled/
+      - ./docker/adminer/php.ini:/usr/local/etc/php/conf.d/40-custom.ini
+    env_file: .env
+    links:
+      - mysql
+      - postgres
+
+  nginx:
+    build: docker/nginx
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf:/etc/nginx/conf.d
+      - ./ssl:/etc/nginx/ssl
+      - ${WEBSERVER_WWW_PATH}:/var/www/
+
+  php8.1:
+    build: docker/php8.1
+    container_name: php8.1
+    volumes:
+      - ./:/home/${USER}/webserver/
+      - ~/.ssh/:/root/.ssh/
+      - ~/.ssh/:/var/www/.ssh/
+      - ${WEBSERVER_WWW_PATH}:/var/www/
+      - ./docker/php8.1/php.ini:/usr/local/etc/php/conf.d/40-custom.ini
+      - ./docker/php8.1/fpm.conf:/usr/local/etc/php-fpm.d/docker.conf
+      - ./ssl/private.crt:/usr/local/share/ca-certificates/private.crt
+    links:
+      - mysql
+      - redis
+    env_file: .env
+    environment:
+      # настраивал xdebug по этой инструкции https://blog.denisbondar.com/post/phpstorm_docker_xdebug
+      # client_host - это адрес машины, где запущен PhpStorm
+      # xdebug 3
+      # у linux нет host.docker.internal, поэтому прописываем ip сети docker в ./local/env/dc.env
+      # по умолчанию это 172.19.0.1
+      XDEBUG_CONFIG : "client_host=${INTERNAL_HOST:-host.docker.internal} client_port=9003"
+
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisData:/data
+
+  # myredis.kz
+  redis-adminer:
+    image: rediscommander/redis-commander
+    container_name: redis-adminer
+    environment:
+      REDIS_HOSTS: redis
+
+volumes:
+  mysqlData:
+  redisData:
+  pgData:
